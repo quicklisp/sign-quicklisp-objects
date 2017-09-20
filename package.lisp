@@ -13,4 +13,6 @@
   (:shadowing-import-from #:alexandria
                           #:ends-with-subseq)
   (:export #:sign
-           #:*signing-user-id*))
+           #:*signing-user-id*
+           #:sign-url
+           #:sign-object))

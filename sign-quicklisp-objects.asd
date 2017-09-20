@@ -7,7 +7,8 @@
   :license "BSD"
   :depends-on (#:zs3
                #:alexandria
-               #:commando)
+               #:commando
+               #:puri)
   :components ((:file "package")
                (:file "sign-quicklisp-objects")))
 

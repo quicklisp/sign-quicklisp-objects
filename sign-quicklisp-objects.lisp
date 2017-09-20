@@ -24,6 +24,27 @@
        :output output
        :no-tty :sign :detach "-a" (truename file)))
 
+(defun s3-components (url)
+  (let ((uri (puri:parse-uri url)))
+    (let ((host (puri:uri-host uri))
+          (path (puri:uri-path uri)))
+      (values host
+              (string-left-trim "/" path)))))
+
+(defun sign-url (url)
+  (multiple-value-bind (bucket key)
+      (s3-components url)
+    (sign-object bucket key)))
+
+(defun bucket-distribution (bucket)
+  (declare (ignore bucket))
+  ;;; FIXME
+  (first (zs3:all-distributions)))
+
+(defun invalidate-signature-file (bucket key)
+  (let ((distribution (bucket-distribution bucket)))
+    (zs3:invalidate-paths distribution (list key))))
+
 (defun sign-object (bucket key)
   (let ((signed-key (concatenate 'string key ".asc"))
         (object-file "sign-object.dat")
@@ -34,17 +55,29 @@
       (put-file signature-file bucket signed-key
                 :public t
                 :content-type "text/plain")
+      (invalidate-signature-file bucket (format nil "/~A" signed-key))
       (format t "; Signed ~A ~A as ~A~%"
               bucket key signed-key))))
 
-(defun sign-keys (bucket keys)
+
+
+(defun =suffix (suffix)
+  (lambda (name)
+    (alexandria:ends-with-subseq suffix name)))
+
+(defun sign-keys (bucket keys &key (matching 'identity))
   "KEYS here is a vector of key objects as returned by ZS3:ALL-KEYS."
-  (map nil
-       (lambda (key)
-         (let ((name (name key)))
-           (unless (ends-with-subseq ".asc" name)
-             (sign-object bucket name))))
-       keys))
+  (flet ((already-signed (name)
+           (search (concatenate 'string name ".asc") keys
+                   :key 'name)))
+    (map nil
+         (lambda (key)
+           (let ((name (name key)))
+             (when (funcall matching name)
+               (unless (or (already-signed name)
+                           (ends-with-subseq ".asc" name))
+                 (sign-object bucket name)))))
+         keys)))
 
 (defun test-signing (file)
   (sign file))
