@@ -36,6 +36,13 @@
       (s3-components url)
     (sign-object bucket key)))
 
+(defun publish-to-url (file url &key (content-type "text/plain"))
+  (multiple-value-bind (bucket key)
+      (s3-components url)
+    (put-file file bucket key
+              :content-type content-type
+              :public t)))
+
 (defun bucket-distribution (bucket)
   (declare (ignore bucket))
   ;;; FIXME
